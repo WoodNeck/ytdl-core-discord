@@ -30,7 +30,9 @@ module.exports = function download(url, options = {}) {
 			else if (info.length_seconds != 0) options = { ...options, filter: 'audioonly' };
 			if (canDemux) {
 				const demuxer = new prism.opus.WebmDemuxer();
-				return resolve(ytdl.downloadFromInfo(info, options).pipe(demuxer).on('end', () => demuxer.destroy()));
+				const readable = ytdl.downloadFromInfo(info, options);
+				readable.on('error', e => reject(e));
+				return resolve([readable.pipe(demuxer).on('end', () => demuxer.destroy()), info]);
 			} else {
 				const transcoder = new prism.FFmpeg({
 					args: [
@@ -51,7 +53,7 @@ module.exports = function download(url, options = {}) {
 					transcoder.destroy();
 					opus.destroy();
 				});
-				return resolve(stream);
+				return resolve([stream, info]);
 			}
 		});
 	});
